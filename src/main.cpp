@@ -1,60 +1,86 @@
 /*
- * Embedded Programming 2 — Session 1: your first flash
+ * Session 2 — read the MPU-6050 and print CSV over serial at ~50 Hz.
  * --------------------------------------------------------------------------
- * The smallest thing that proves the WHOLE chain works:
- *   your code -> compiler -> USB -> real silicon -> and back to your screen.
+ * Copy this into src/main.cpp. Sanity-check against physics you know:
+ *   flat on the table -> Z is about +9.8 (that's gravity!), X and Y near 0.
  *
- * About the LED: this board has no ordinary on/off LED. It carries a single
- * addressable RGB LED (a WS2812), so you don't switch it on — you send it a
- * colour. neopixelWrite(pin, red, green, blue) does that for you.
+ * Record a dataset (one file per gesture) from your laptop:
+ *   python tools/record_csv.py wave_01.csv
+ * Close Serial Monitor first. Wait for GO; move until STOP (10 seconds).
+ * Use PlatformIO's Python; see README for Windows/Mac commands.
+ * ...then upload the CSVs to Edge Impulse next session.
+ * 
+ * 
+ * * HOMEWORK — tilt switches, knob dims:
+ *   Combine this example with examples/session02_mpu_read.cpp in src/main.cpp.
+ *   Keep one setup() and one loop(), and keep your working platformio.ini.
+ *   MPU wiring: 3V3, GND, SDA GPIO8, SCL GPIO9. Keep the LED and pot above.
  *
- * Check the silkscreen next to the LED for its pin! Ours says "RGB@IO38".
- * Other ESP32-S3 boards put it on GPIO48 — if yours does, change the line
- * below. (This is why LED_BUILTIN doesn't help here: it assumes GPIO48.)
+ *   1. Choose one accelerometer axis. With its positive direction pointing up,
+ *      enable the LED; held sideways or down, turn the LED off.
+ *      Read the acceleration in those poses and choose a threshold between
+ *      them. Judge orientation while held still, not during a shake.
+ *   2. While enabled, the pot sets brightness. While disabled, the LED stays
+ *      off at every knob setting. The existing raw / 16 mapping is fine.
+ *   3. Test up -> sideways -> down -> up, plus two knob settings while enabled.
+ *      Use a nonzero knob setting when checking the orientation switch.
+ *   4. Add three comment lines at the top of src/main.cpp:
+ *      - My chosen axis and threshold.
+ *      - The readings I observed in the three poses.
+ *      - One thing that surprised me when testing.
+ *   5. Commit and push as FINAL: tilt switches, knob dims.
+ *      Submit that commit's link in Moodle with your AI-use line.
  *
- * The serial "hello" is the guaranteed proof: if you see it in the monitor,
- * your toolchain, your cable and your board are all fine.
- *
- * SCOPE_PIN is for the PicoScope block later in the session: a plain 1 kHz
- * square wave, always running, that you can find on the scope in seconds.
- * It is deliberately NOT the LED pin — see the note above ledcSetup().
+ *   Both controls must work; a brightness curve or perfectly flicker-free
+ *   switching is not required. Optional: reduce flicker near the threshold.
+ *   The unchanged knob-only example below is the class starting point.
  */
-#include <Arduino.h>
 
-#define RGB_LED_PIN 38   // silkscreen: RGB@IO38
-#define SCOPE_PIN    2   // J3 pin 5, four pins down from GND — probe this one
+#include <Arduino.h>
+#include <Adafruit_MPU6050.h>
+#include <Wire.h>
+
+#define POT_PIN 4
+#define LED_PIN 40
+
+Adafruit_MPU6050 mpu;
 
 void setup() {
   Serial.begin(115200);
-  delay(300);                                 // let serial come up before printing
-  Serial.println();
-  Serial.println("Hello from ESP32-S3 — the whole chain works!");
+  delay(300);
+  pinMode(LED_PIN, OUTPUT);
+  Wire.begin(8, 9);                   // SDA 8, SCL 9
 
-  /*
-   * A test signal for the oscilloscope.
-   *
-   * Why a separate pin, when the LED is already blinking? Because the LED is
-   * a WS2812: its pin sits idle-low and carries a ~30 us burst of pulses only
-   * at the instant the colour changes. Twice a second, for 30 microseconds —
-   * that is 0.006 % of the time. Finding that on a scope is a genuinely hard
-   * first capture. GPIO2 gives you an easy one: a steady square wave that is
-   * always there.
-   *
-   * LEDC is the ESP32's hardware PWM. Once set up it runs on its own, so the
-   * delay(500) calls in loop() below don't disturb it at all.
-   */
-  ledcSetup(0, 1000, 10);        // channel 0, 1 kHz, 10-bit duty resolution
-  ledcAttachPin(SCOPE_PIN, 0);
-  ledcWrite(0, 512);             // 512 / 1023 = 50 % duty -> a square wave
-  Serial.println("Scope test signal: 1 kHz square wave on GPIO2");
+  if (!mpu.begin()) {
+    Serial.println("MPU-6050 not found — run the I2C scanner first.");
+    while (true) delay(1000);
+  }
+  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
 }
 
 void loop() {
-  neopixelWrite(RGB_LED_PIN, 0, 24, 0);       // dim green (r, g, b)
-  Serial.println("blink: on");
-  delay(500);
+  //POT READING
+  int raw  = analogRead(POT_PIN);         // 0 .. 4095
+  int duty = raw / 16;                    // 0 .. 255
+  if (duty > 255) duty = 255;             // guard the top end of the range
 
-  neopixelWrite(RGB_LED_PIN, 0, 0, 0);        // off
-  Serial.println("blink: off");
-  delay(500);
+  //MPU READING
+  sensors_event_t a, g, t;
+  mpu.getEvent(&a, &g, &t);           // acceleration in m/s^2
+
+  if (a.acceleration.z > 8) analogWrite(LED_PIN, duty); 
+  //NEED TO 
+  //use alignment in logic positive Z value
+  //factor out shake values only when delta reads < .20 
+  //
+  else analogWrite(LED_PIN, 0);
+
+  //POT PRINTING
+  Serial.printf("raw %4d -> duty %3d\n", raw, duty);
+
+  //MPU PRINTING
+  Serial.printf("%.2f,%.2f,%.2f\n",
+                a.acceleration.x, a.acceleration.y, a.acceleration.z);
+
+  delay(50);                          // ~50 Hz — the rate you'll train AND deploy at
 }
