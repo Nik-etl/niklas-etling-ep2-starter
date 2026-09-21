@@ -65,10 +65,22 @@ void loop() {
   if (duty > 255) duty = 255;             // guard the top end of the range
 
   //MPU READING
-  sensors_event_t a, g, t;
-  mpu.getEvent(&a, &g, &t);           // acceleration in m/s^2
+  sensors_event_t a1, g1, t1;
+  mpu.getEvent(&a1, &g1, &t1);           // first reading acceleration in m/s^2
+  delay(20);
+  sensors_event_t a2, g2, t2;
+  mpu.getEvent(&a2, &g2, &t2);           // second reading acceleration in m/s^2
 
-  if (a.acceleration.z > 8) analogWrite(LED_PIN, duty); 
+  //delta values for idle logic
+  float deltx = abs(a2.acceleration.x - a1.acceleration.x);
+  float delty = abs(a2.acceleration.y - a1.acceleration.y);
+  float deltz = abs(a2.acceleration.z - a1.acceleration.z);
+  
+  float deltatotal = deltx + delty + deltz;
+
+  float idlethreshold = 0.70;
+
+  if (idlethreshold > deltatotal && a1.acceleration.z > 0) analogWrite(LED_PIN, duty); 
   //NEED TO 
   //use alignment in logic positive Z value
   //factor out shake values only when delta reads < .20 
@@ -79,8 +91,8 @@ void loop() {
   Serial.printf("raw %4d -> duty %3d\n", raw, duty);
 
   //MPU PRINTING
-  Serial.printf("%.2f,%.2f,%.2f\n",
-                a.acceleration.x, a.acceleration.y, a.acceleration.z);
+  Serial.printf("%.2f,%.2f,%.2f, deltaT %.2f\n",
+                a1.acceleration.x, a1.acceleration.y, a1.acceleration.z, deltatotal);
 
   delay(50);                          // ~50 Hz — the rate you'll train AND deploy at
 }
