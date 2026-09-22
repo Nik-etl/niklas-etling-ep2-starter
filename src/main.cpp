@@ -9,60 +9,16 @@
  * Close Serial Monitor first. Wait for GO; move until STOP (10 seconds).
  * Use PlatformIO's Python; see README for Windows/Mac commands.
  * ...then upload the CSVs to Edge Impulse next session.
- * 
- * 
- * * HOMEWORK — tilt switches, knob dims:
- *   Combine this example with examples/session02_mpu_read.cpp in src/main.cpp.
- *   Keep one setup() and one loop(), and keep your working platformio.ini.
- *   MPU wiring: 3V3, GND, SDA GPIO8, SCL GPIO9. Keep the LED and pot above.
- *
- *   1. Choose one accelerometer axis. With its positive direction pointing up,
- *      enable the LED; held sideways or down, turn the LED off.
- *      Read the acceleration in those poses and choose a threshold between
- *      them. Judge orientation while held still, not during a shake.
- *   2. While enabled, the pot sets brightness. While disabled, the LED stays
- *      off at every knob setting. The existing raw / 16 mapping is fine.
- *   3. Test up -> sideways -> down -> up, plus two knob settings while enabled.
- *      Use a nonzer knob setting when checking the orientation switch.
- *   4. Add three comment lines at the top of src/main.cpp:
- *      - My chosen axis and threshold.
- *      - The readings I observed in the three poses.
- *      - One thing that surprised me when testing.
- *   5. Commit and push as FINAL: tilt switches, knob dims.
- *      Submit that commit's link in Moodle with your AI-use line.
- *
- *   Both controls must work; a brightness curve or perfectly flicker-free
- *   switching is not required. Optional: reduce flicker near the threshold.
- *   The unchanged knob-only example below is the class starting point.
  */
-/* 
-1. I chose the Z axis for this assignment and used threshold 0
-
-2.  Sensor readings in 3 positions:
-    1 - Z side up: 0.59,-0.05,8.63 raw 4095 Duty 255 
-                  0.65,-0.04,8.66 raw  990 Duty  61
-    2 - X side up: 10.46,-0.20,-1.01 raw 988 duty  61
-                  10.45, -0.21, -0.98 raw 0 duty 0
-    3 - Z side down: 0.76,-0.16,-11.49 raw 0 duty0
-                     0.82,-0.18,-11.46 raw 3855 duty 240
-
-3.  One thing that surprised me while testing was the variations that the sensor has in its readings 
-for example, total delta resting on a table can give values up to 24 I had to change delta total multiple times to make it usable especially for holding in hand (I also learned I do not have stable hands)
-
-*/
 #include <Arduino.h>
 #include <Adafruit_MPU6050.h>
 #include <Wire.h>
-
-#define POT_PIN 4
-#define LED_PIN 40
 
 Adafruit_MPU6050 mpu;
 
 void setup() {
   Serial.begin(115200);
   delay(300);
-  pinMode(LED_PIN, OUTPUT);
   Wire.begin(8, 9);                   // SDA 8, SCL 9
 
   if (!mpu.begin()) {
@@ -73,35 +29,11 @@ void setup() {
 }
 
 void loop() {
-  //POT READING
-  int raw  = analogRead(POT_PIN);         // 0 .. 4095
-  int duty = raw / 16;                    // 0 .. 255
-  if (duty > 255) duty = 255;             // guard the top end of the range
+  sensors_event_t a, g, t;
+  mpu.getEvent(&a, &g, &t);           // acceleration in m/s^2
 
-  //MPU READING
-  sensors_event_t a1, g1, t1;
-  mpu.getEvent(&a1, &g1, &t1);           // first sensor readings acceleration, gyroscope and temp in m/s^2
-  delay(20);
-  sensors_event_t a2, g2, t2;
-  mpu.getEvent(&a2, &g2, &t2);           // second sensor readings acceleration in m/s^2
+  Serial.printf("%.2f,%.2f,%.2f\n",
+                a.acceleration.x, a.acceleration.y, a.acceleration.z);
 
-  //delta values for idle logic
-  float deltx = abs(a2.acceleration.x - a1.acceleration.x);
-  float delty = abs(a2.acceleration.y - a1.acceleration.y);
-  float deltz = abs(a2.acceleration.z - a1.acceleration.z);
-  
-  float deltatotal = deltx + delty + deltz;
-
-  float idlethreshold = 0.70;
-
-  if (idlethreshold > deltatotal && a1.acceleration.z > 0) analogWrite(LED_PIN, duty); 
-  else analogWrite(LED_PIN, 0);
-
-  //POT PRINTING
-  Serial.printf("raw %4d -> duty %3d\n", raw, duty);
-
-  //MPU PRINTING
-  Serial.printf("%.2f,%.2f,%.2f, deltaT %.2f\n", a1.acceleration.x, a1.acceleration.y, a1.acceleration.z, deltatotal);
-
-  delay(50);                          // ~50 Hz — the rate you'll train AND deploy at
+  delay(20);                          // ~50 Hz — the rate you'll train AND deploy at
 }
