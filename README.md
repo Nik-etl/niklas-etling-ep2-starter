@@ -42,6 +42,7 @@ first to prove your whole toolchain works.
 | `lib/` | Libraries — **drop your Edge Impulse model here** (session 4). |
 | `tools/` | Helper scripts (record/plot CSV, image → C array). |
 | `platformio.ini` | The build recipe (board, libraries, flags). **Don't prune it** — see Notes. |
+| `data-plan-template.md` | The team data plan skeleton — copy it into your team repo as `data-plan.md` (session 3). |
 | `report-template.md` | The final project report skeleton — copy it into your team repo (session 10). |
 
 PlatformIO only builds `src/` + `lib/`, so the files in `examples/` sit safely
