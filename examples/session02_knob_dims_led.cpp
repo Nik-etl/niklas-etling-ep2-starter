@@ -32,7 +32,7 @@
  * analogWrite() takes LEDC channels counting down from the top, and the scope
  * signal holds channel 0. They coexist.
  *
- * HOMEWORK — tilt switches, knob dims:
+ * HOMEWORK — tilt turns the LED on/off, knob dims (no switch part needed):
  *   Combine this example with examples/session02_mpu_read.cpp in src/main.cpp.
  *   Keep one setup() and one loop(), and keep your working platformio.ini.
  *   MPU wiring: 3V3, GND, SDA GPIO8, SCL GPIO9. Keep the LED and pot above.
@@ -44,7 +44,7 @@
  *   2. While enabled, the pot sets brightness. While disabled, the LED stays
  *      off at every knob setting. The existing raw / 16 mapping is fine.
  *   3. Test up -> sideways -> down -> up, plus two knob settings while enabled.
- *      Use a nonzero knob setting when checking the orientation switch.
+ *      Use a nonzero knob setting when checking tilt on/off.
  *   4. Add three comment lines at the top of src/main.cpp:
  *      - My chosen axis and threshold.
  *      - The readings I observed in the three poses.
