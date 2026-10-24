@@ -19,3 +19,6 @@ Thumbs.db
 # Regenerable CSV plots and Python caches
 plots/
 __pycache__/
+
+#model
+lib/*

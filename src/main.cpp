@@ -1,39 +1,81 @@
 /*
- * Session 2 — read the MPU-6050 and print CSV over serial at ~50 Hz.
+ * Session 4 — run YOUR trained model on the board.
  * --------------------------------------------------------------------------
- * Copy this into src/main.cpp. Sanity-check against physics you know:
- *   flat on the table -> Z is about +9.8 (that's gravity!), X and Y near 0.
+ * PREREQUISITE (do this first, or it will NOT compile — that's expected):
+ *   1. In Edge Impulse: Deployment -> "Arduino library" -> EON + int8 -> Build.
+ *   2. Unzip the downloaded .zip into the lib/ folder of this project.
+ *   3. Change the #include below to match the header the zip created
+ *      (look in lib/<your-project>/  -> it ends in _inferencing.h).
  *
- * Record a dataset (one file per gesture) from your laptop:
- *   python tools/record_csv.py wave_01.csv
- * Close Serial Monitor first. Wait for GO; move until STOP (10 seconds).
- * Use PlatformIO's Python; see README for Windows/Mac commands.
- * ...then upload the CSVs to Edge Impulse next session.
+ * This is the honest shape of on-device ML:
+ *   read the sensor -> fill a window -> run the model -> act on the result.
+ * No web server, no network — just the sensor and the model.
  */
 #include <Arduino.h>
 #include <Adafruit_MPU6050.h>
 #include <Wire.h>
 
+// 👇 CHANGE THIS to your Edge Impulse project's header:
+#include <../lib/nik-etl-project-1_inferencing/src/nik-etl-project-1_inferencing.h>
+
+#define LED_PIN 38 
+
 Adafruit_MPU6050 mpu;
 
+float buffer[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE];   // the window — allocated once 
+int   i = 0;                                        // fill position
+
+// RGB color per class index: shake = red, wave = blue, idle = green
+const uint8_t colors[EI_CLASSIFIER_LABEL_COUNT][3] = {
+  {0, 50, 0},   // idle
+  {50, 0, 0},   // shake
+  {0, 0, 50}    // wave
+};
+
+void act_on(ei_impulse_result_t &result) {
+  // Pick the highest-confidence class.
+  int   best = 0;
+  float best_val = 0.0f;
+  for (int k = 0; k < EI_CLASSIFIER_LABEL_COUNT; k++) {
+    if (result.classification[k].value > best_val) {
+      best_val = result.classification[k].value;
+      best = k;
+    }
+  }
+  // Your threshold is a DECISION, not a default. Pick it for the error that
+  // hurts your project more (a missed event vs a false trigger).
+  if (best_val > 0.60f) {
+    Serial.printf(">> %s (%.0f%%)\n", result.classification[best].label, best_val * 100);
+    // TODO: your action here — light the RGB LED, move a servo, send a message.
+    //change color RGB based on classification 
+    neopixelWrite(LED_PIN, colors[best][0], colors[best][1], colors[best][2]);
+  }
+}
 void setup() {
   Serial.begin(115200);
   delay(300);
-  Wire.begin(8, 9);                   // SDA 8, SCL 9
-
-  if (!mpu.begin()) {
-    Serial.println("MPU-6050 not found — run the I2C scanner first.");
-    while (true) delay(1000);
-  }
+  Wire.begin(8, 9); // sda 8 scl 9 
+  if (!mpu.begin()) { Serial.println("MPU not found"); while (true) delay(1000); }
   mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
 }
 
 void loop() {
   sensors_event_t a, g, t;
-  mpu.getEvent(&a, &g, &t);           // acceleration in m/s^2
+  mpu.getEvent(&a, &g, &t);
+  buffer[i++] = a.acceleration.x;
+  buffer[i++] = a.acceleration.y;
+  buffer[i++] = a.acceleration.z;
 
-  Serial.printf("%.2f,%.2f,%.2f\n",
-                a.acceleration.x, a.acceleration.y, a.acceleration.z);
+  if (i >= EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE) {
+    signal_t signal;
+    numpy::signal_from_buffer(buffer, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, &signal);
 
-  delay(20);                          // ~50 Hz — the rate you'll train AND deploy at
+    ei_impulse_result_t result;
+    run_classifier(&signal, &result, false);
+    act_on(result);
+    i = 0;
+  }
+
+  delay(20);   // 50 Hz — the rate you trained at! (drop this and the model sees garbage)
 }
+
