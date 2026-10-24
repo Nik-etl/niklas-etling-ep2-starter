@@ -49,6 +49,9 @@ void act_on(ei_impulse_result_t &result) {
     // TODO: your action here — light the RGB LED, move a servo, send a message.
     //change color RGB based on classification 
     neopixelWrite(LED_PIN, colors[best][0], colors[best][1], colors[best][2]);
+    if (best == 2) {   // 2 = wave's index — verify against printed labels!
+      Serial.printf("\n\nHi\n\n");
+    }
   }
 }
 void setup() {
