@@ -22,23 +22,24 @@
 
 Adafruit_MPU6050 mpu;
 
-float buffer[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE];   // the window — allocated once 
+float buffer[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE];   // the window — allocated once (50Hz x 2 sec windows x 3 axes = 300 float values)  
 int   i = 0;                                        // fill position
 
-// RGB color per class index: shake = red, wave = blue, idle = green
+// RGB color per class index (shake = red, wave = blue, idle = green)
 const uint8_t colors[EI_CLASSIFIER_LABEL_COUNT][3] = {
   {0, 50, 0},   // idle
   {50, 0, 0},   // shake
   {0, 0, 50}    // wave
 };
 
+
 void act_on(ei_impulse_result_t &result) {
   // Pick the highest-confidence class.
   int   best = 0;
   float best_val = 0.0f;
-  for (int k = 0; k < EI_CLASSIFIER_LABEL_COUNT; k++) {
-    if (result.classification[k].value > best_val) {
-      best_val = result.classification[k].value;
+  for (int k = 0; k < EI_CLASSIFIER_LABEL_COUNT; k++) { //iterate through classes
+    if (result.classification[k].value > best_val) { // pick the highest-confidence class
+      best_val = result.classification[k].value;  
       best = k;
     }
   }
@@ -48,8 +49,8 @@ void act_on(ei_impulse_result_t &result) {
     Serial.printf(">> %s (%.0f%%)\n", result.classification[best].label, best_val * 100);
     // TODO: your action here — light the RGB LED, move a servo, send a message.
     //change color RGB based on classification 
-    neopixelWrite(LED_PIN, colors[best][0], colors[best][1], colors[best][2]);
-    if (best == 2) {   // 2 = wave's index — verify against printed labels!
+    neopixelWrite(LED_PIN, colors[best][0], colors[best][1], colors[best][2]); // passes the values from color index for each parameter of the RGB function
+    if (best == 2) {   // 2 is wave's index 
       Serial.printf("\n\nHi\n\n");
     }
   }
@@ -65,16 +66,22 @@ void setup() {
 void loop() {
   sensors_event_t a, g, t;
   mpu.getEvent(&a, &g, &t);
-  buffer[i++] = a.acceleration.x;
+  buffer[i++] = a.acceleration.x; //filling window buffer with acceleration data [x1,y1,z1,x2,y2,z2...]
   buffer[i++] = a.acceleration.y;
-  buffer[i++] = a.acceleration.z;
+  buffer[i++] = a.acceleration.z; 
 
-  if (i >= EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE) {
+  if (i >= EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE) { //when buffer fills up 
     signal_t signal;
-    numpy::signal_from_buffer(buffer, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, &signal);
+    numpy::signal_from_buffer(buffer, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, &signal); //absorb raw data/signal from buffer 
 
     ei_impulse_result_t result;
-    run_classifier(&signal, &result, false);
+
+    uint32_t t0 = millis();
+    run_classifier(&signal, &result, false); //run the classifier using the address of signal struct and outputting at the address of result struct
+    uint32_t t1 = millis();
+
+    Serial.printf("Inference time: %lu ms\n", (unsigned long)(t1 - t0)); 
+
     act_on(result);
     i = 0;
   }
