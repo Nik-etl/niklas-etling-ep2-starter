@@ -45,7 +45,7 @@ void act_on(ei_impulse_result_t &result) {
   }
   // Your threshold is a DECISION, not a default. Pick it for the error that
   // hurts your project more (a missed event vs a false trigger).
-  if (best_val > 0.60f) {
+  if (best_val > 0.70f) {
     Serial.printf(">> %s (%.0f%%)\n", result.classification[best].label, best_val * 100);
     // TODO: your action here — light the RGB LED, move a servo, send a message.
     //change color RGB based on classification 
