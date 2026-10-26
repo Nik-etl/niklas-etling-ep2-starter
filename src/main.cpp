@@ -20,6 +20,9 @@
 
 #define LED_PIN 38 
 
+const char* ssid     = "Savonia-IoT"; 
+const char* password = "SuperSecret123";   // "temporary"... ships forever
+
 Adafruit_MPU6050 mpu;
 
 float buffer[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE];   // the window — allocated once (50Hz x 2 sec windows x 3 axes = 300 float values)  
@@ -61,6 +64,8 @@ void setup() {
   Wire.begin(8, 9); // sda 8 scl 9 
   if (!mpu.begin()) { Serial.println("MPU not found"); while (true) delay(1000); }
   mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+  Serial.println(ssid);       
+  Serial.println(password); // use both so the compiler keeps them in flash // (and printing secrets to Serial is leak #1)
 }
 
 void loop() {
@@ -88,4 +93,3 @@ void loop() {
 
   delay(20);   // 50 Hz — the rate you trained at! (drop this and the model sees garbage)
 }
-

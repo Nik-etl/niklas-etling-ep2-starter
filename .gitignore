@@ -8,6 +8,7 @@
 
 # Build artifacts
 *.bin
+strings.txt
 
 # NOTE: your session-2 gesture recordings (*.csv) ARE meant to be committed.
 # Don't add *.csv here — you need them in the repo for session 3.

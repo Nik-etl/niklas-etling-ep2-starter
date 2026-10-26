@@ -1,0 +1,5 @@
+# Threat Modeling Assesment for Home Rapberry Pi Server
+
+
+**Asset**: I am protecting my home network and personal data (DNS query log, photos, etc.)
+.**Threat** The threats are curious visitors, criminals looking for personal information or resources, remote attackers, DNS attacks, botnets. The attack surface consists of web access as it is connected to the internet, and physical access to the server (debug ports, flash, pins, sd card). **Response** Basic hygiene is important (default passwords changed, MFA on services, SSH hardening, encrypting for personal data directory). Set up guest network for wi-fi access. Alerts for unsuccessful log in attempts. Use a firewall to block unauthorized access. Use a VPN to encrypt data in transit. Incorporate physical security (Location and disable UART/USB).
