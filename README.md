@@ -44,6 +44,7 @@ first to prove your whole toolchain works.
 | `platformio.ini` | The build recipe (board, libraries, flags). **Don't prune it** — see Notes. |
 | `data-plan-template.md` | The team data plan skeleton — copy it into your team repo as `data-plan.md` (session 3). |
 | `report-template.md` | The final project report skeleton — copy it into your team repo (session 10). |
+| `ceiling.md` | Your session-6 results table — fill it in during the vision lab. |
 
 PlatformIO only builds `src/` + `lib/`, so the files in `examples/` sit safely
 out of the build until you copy one in.
@@ -82,7 +83,7 @@ Moodle as a backup, so you can continue the lab while resolving a sync problem.
 - **Session 3 — train:** upload your CSVs to Edge Impulse and train. *(We install the Edge Impulse CLI together in the lab if we need the live data forwarder — don't fight with it at home.)*
 - **Session 4 — deploy:** export your model as an **Arduino library**, unzip into `lib/`, then work from `examples/session04_deploy.cpp` (edit the `#include` to your project's header).
 - **Session 5 — security:** copy `examples/session05_plant_secret.cpp` → `src/main.cpp`, flash, then dump the flash and find your secret (see that file's header).
-- **Session 6 — vision:** clone the Edge Impulse project linked in Moodle, train it, deploy it, and feed it a baked-in test image from `include/test_images.h`. Then push the resolution until the board gives up and record where — `ceiling.md`, `FINAL: my ceiling`.
+- **Session 6 — vision:** clone the Edge Impulse project linked in Moodle (it arrives trained), deploy it and run `examples/session06_vision.cpp` on the photos in `include/test_images.h`. Then retrain at 160 and 48 px and time each size. Fill in `ceiling.md` as you go and commit `FINAL: my ceiling`.
 - **Session 7 — platform:** your team's platform sentence goes in your **team** repo's `README`.
 - **Sessions 8–10 — project:** the project lives in your **team** repo, not this fork. Copy `report-template.md` across when you write the report (2 pages max).
 
